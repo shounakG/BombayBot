@@ -414,9 +414,16 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 		stats[p]['villagers_lost'] = len(v['lost'])
 		stats[p]['villagers_peak'] = max(v['alive'], default=0)
 		stats[p]['villagers_at'] = {m: v['alive'][m] for m in (20, 30, 40) if m < len(v['alive'])}
-	floating = {p: unplanned_floating(A, p, curve.get(p, []), army[p]['_alive'], stats[p], end) for p in pids}
+	banked = {p: unplanned_floating(A, p, curve.get(p, []), army[p]['_alive'], stats[p], end) for p in pids}
+	# Floating is judged against what the player was spending: 700 banked is fine for someone turning 3000 a
+	# minute into units, bad for someone spending 1000. So the score uses minutes of spending sitting idle.
+	floating = {}
 	for p in pids:
-		stats[p]['floating'] = floating[p]
+		rate = spending_rate(A, p, FLOAT_FROM, end)
+		stats[p]['floating'] = banked[p]
+		stats[p]['spend_per_min'] = round(rate)
+		floating[p] = round(banked[p] / max(rate, 100), 2)
+		stats[p]['float_minutes'] = floating[p]
 	exec_parts[2] = _minmax({p: villager_value(stats[p]['_vill_made'], attacked[p], stats[p]['_vill_alive']) for p in pids})
 	exec_parts.append(_minmax(floating, invert=True))
 	playstyle(A, players, stats, army, floating, end, trib_out)
@@ -500,7 +507,7 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 		None: dict(exec=.30, press=.30, surv=.20, team=.20),
 	}
 	for p in pids:
-		e = sum(part[p] for part in exec_parts) / len(exec_parts)
+		e = sum(w * part[p] for w, part in zip(EXEC_WEIGHTS, exec_parts)) / sum(EXEC_WEIGHTS[:len(exec_parts)])
 		t = team_parts[0][p] * .5 + team_parts[1][p] * .35 + team_parts[2][p] * .15
 		surv = round(survival[p], 1) if survival[p] is not None else None
 		sc = dict(exec=round(e, 1), press=round(press[p], 1), surv=surv, team=round(t, 1))
@@ -721,6 +728,31 @@ def villager_value(times, attacked_minutes=(), alive=None):
 			if any(k in attacked for k in range(m - REPLACE_WINDOW, m + 1)):
 				value += 1
 	return round(value, 1)
+
+
+FLOAT_FROM = 10 * 60000
+# Execution parts: Castle Age timing, Imperial Age click, villager value, first military unit (half weight), floating
+EXEC_WEIGHTS = (1.0, 1.0, 1.0, 0.5, 1.0)
+
+
+def spending_rate(A, pid, start, end):
+	""" Resources spent per minute between start and end: units queued, research, buildings and tributes. """
+	if end <= start:
+		return 0.0
+	costs, techs = _costs(), _costs_all().get('techs', {})
+	spent = 0.0
+	for a in A:
+		if a.get('player_id') != pid or not start <= a['t'] <= end:
+			continue
+		if a['a'] == 'DE_QUEUE':
+			spent += sum(costs.get(str(a['unit_id']), {}).values()) * (a.get('amount', 1) or 1)
+		elif a['a'] == 'RESEARCH':
+			spent += sum(techs.get(str(a.get('technology_id')), {}).values())
+		elif a['a'] == 'BUILD':
+			spent += sum(costs.get(str(a.get('building_id')), {}).values())
+		elif a['a'] == 'DE_TRIBUTE':
+			spent += sum(a.get(k) or 0 for k in ('food', 'wood', 'stone', 'gold'))
+	return spent / ((end - start) / 60000)
 
 
 def unplanned_floating(A, pid, curve, military_alive, st, end):

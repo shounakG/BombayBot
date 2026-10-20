@@ -185,7 +185,7 @@ def text_for_ai(result, map_name=None, lobby=None):
 				f"(fishing ships made {s.get('fishing_ships_made', 0)}) "
 				f"{', '.join(f'{v} at {m} min' for m, v in s.get('villagers_at', {}).items())} (peak {s.get('villagers_peak')}, "
 				f"about {s.get('villagers_lost')} lost); "
-				f"unplanned floating resources {s['floating']} on average (not counting near 200 population or saving "
+				f"unplanned floating resources {s['floating']} on average while spending {s.get('spend_per_min')} a minute ({s.get('float_minutes')} minutes of spending idle) (not counting near 200 population or saving "
 				f"for a big purchase); trade carts {s['trade_carts']}; "
 				f"{'ran out of gold income late (little gold spent, Market selling) and macro reduced ' + str(s['no_trade_penalty']) + ' for not making trade carts; ' if s.get('no_trade_penalty') else ''}"
 				f"playstyle {s['playstyle']} (macro {s['macro']}/10: steady villager and military production, army size, "

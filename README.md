@@ -80,6 +80,9 @@ What the breakdown shows:
   Villager value: each villager made counts in full while the player has under 120 alive, then less and less
   until 150, and nothing at 150+ (unless the base was attacked in the previous 10 minutes). After losses the
   alive count drops, so replacements count again.
+  Floating is judged against spending: the unplanned bank divided by what the player spent per minute (units,
+  research, buildings, tributes) from 10:00, so a big bank matters less for a player converting a lot into units.
+  Execution weighs the first military unit at half the other parts.
   Floating: resources banked from 10 minutes on count against the player, except near 200 population
   (estimated villagers alive, army on the map and trade carts) and money saved for a research, age-up
   or building costing 600+ that the player starts within the next 2 minutes. Execution uses the same rules.
