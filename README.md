@@ -42,6 +42,7 @@ Members upload a recorded game with `/replay upload` (an .aoe2record file, or a 
 BombayBot analyses it, saves every player's performance (see Player insights) and posts a breakdown of the game.
 
 Setup (optional):
+* Uploading a game that is already posted updates that post in place (new Elo links, latest scoring) instead of posting again.
 * Posts go to the queue channel. To post them in a forum instead: `/channel set variable:replay_forum value:#game-breakdowns`.
 * Set `GOOGLE_AI_API_KEY` for an AI-written recap; turn it off per channel with `replay_ai`.
 

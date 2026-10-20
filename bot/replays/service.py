@@ -180,16 +180,8 @@ async def publish(qc, result, rec_bytes, map_name=None, lobby=None, title=None, 
 	Create the forum post (or, with no forum set, a message in the queue channel).
 	Returns dict(channel_id, thread_id, message_id, url) describing the post.
 	"""
-	narrative = None
-	if getattr(qc.cfg, 'replay_ai', True) and cfg.GOOGLE_AI_API_KEY:
-		try:
-			from bot.bombay.ai import generate_replay_summary
-			narrative = await generate_replay_summary(post.text_for_ai(result, map_name, lobby))
-		except Exception as e:
-			log.error(f"Replay AI summary failed: {e}")
-
 	title = title or f"{map_name or 'Game'} — {_winner_text(result)}"
-	embed = post.build_embed(result, title, narrative=narrative, footer=footer)
+	embed = await _render(qc, result, title, map_name, lobby, footer)
 	file = _rec_file(rec_bytes, title)
 	content = "Discuss the game here. The recorded game is attached."
 	extra = dict(file=file) if file else {}
@@ -214,6 +206,41 @@ async def publish(qc, result, rec_bytes, map_name=None, lobby=None, title=None, 
 	elif forum is not None:
 		await _notify(qc, f"Game breakdown for {title}: {link}")
 	return posted
+
+
+async def _render(qc, result, title, map_name=None, lobby=None, footer=None):
+	narrative = None
+	if getattr(qc.cfg, 'replay_ai', True) and cfg.GOOGLE_AI_API_KEY:
+		try:
+			from bot.bombay.ai import generate_replay_summary
+			narrative = await generate_replay_summary(post.text_for_ai(result, map_name, lobby))
+		except Exception as e:
+			log.error(f"Replay AI summary failed: {e}")
+	return post.build_embed(result, title, narrative=narrative, footer=footer)
+
+
+async def update_post(qc, row, result, title, map_name=None, footer=None):
+	"""
+	Re-render an existing post with a fresh analysis (new Elo links, new scoring rules).
+	Forum posts: the starter message has the thread's id. Returns True when the post was edited.
+	"""
+	try:
+		embed = await _render(qc, result, title, map_name, footer=footer)
+		if row.get('message_id'):
+			channel = dc.get_channel(row['channel_id']) or await dc.fetch_channel(row['channel_id'])
+			msg = await channel.fetch_message(row['message_id'])
+		else:
+			thread = dc.get_channel(row['thread_id']) or await dc.fetch_channel(row['thread_id'])
+			msg = await thread.fetch_message(row['thread_id'])
+		await msg.edit(embed=embed)
+		if row.get('thread_id'):
+			thread = dc.get_channel(row['thread_id']) or await dc.fetch_channel(row['thread_id'])
+			if getattr(thread, 'name', title[:100]) != title[:100]:
+				await thread.edit(name=title[:100])
+		return True
+	except Exception as e:  # never fail the upload because the old post could not be edited
+		log.error(f"Could not update replay post: {e}")
+		return False
 
 
 def _rec_file(rec_bytes, title):
@@ -263,7 +290,11 @@ async def analyze_upload(qc, ctx, data: bytes, filename: str, summary: bool = Tr
 	existing = await _live_post(key=key, fingerprint=fp)
 	if existing or key in _posting or fp in _posting:
 		url = existing.get('post_url') if existing else None
-		await ctx.success(f"This game has already been posted{': ' + url if url else '.'} Player stats were refreshed.")
+		where = f": {url}" if url else "."
+		if existing and await update_post(qc, existing, result, title, rec.get('map_name'), footer=f"Uploaded by {get_nick(ctx.author)}"):
+			await ctx.success(f"This game was already posted, so the post was updated with the latest Elo and stats{where}")
+		else:
+			await ctx.success(f"This game has already been posted{where} Player stats were refreshed.")
 		return
 	_posting.update((key, fp))
 	try:
