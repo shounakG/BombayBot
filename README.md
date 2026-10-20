@@ -56,6 +56,9 @@ What the breakdown shows:
   Each age's army lists the two biggest unit lines plus any siege the player made (2 or more units).
 * When the AI recap is on, the summary at the top is labelled "AI summary"; the plain summary has no label.
 * Each player also gets four scores from 1 to 10, relative to the lobby: execution, pressure, survival and team play.
+  A part nobody in the lobby did (no forward castles or towers, no tributes, nobody in Imperial Age) is left
+  out and its weight spread over the other parts. Saving for an age-up (the 2 minutes before the click) is
+  not a gap in military production. Execution weighs the first military unit at a quarter of the others.
   Overall weights: flanks execution 27%, pressure 36%, survival 27%, team 10%; pockets 40/25/25/10; others
   32/32/26/10. When survival is not scored its weight is spread over the rest.
   Execution: Castle and Imperial Age timing, villager value, first military unit and floating. A player who made
@@ -84,7 +87,6 @@ What the breakdown shows:
   alive count drops, so replacements count again.
   Floating is judged against spending: the unplanned bank divided by what the player spent per minute (units,
   research, buildings, tributes) from 10:00, so a big bank matters less for a player converting a lot into units.
-  Execution weighs the first military unit at half the other parts.
   Floating: resources banked from 10 minutes on count against the player, except near 200 population
   (estimated villagers alive, army on the map and trade carts) and money saved for a research, age-up
   or building costing 600+ that the player starts within the next 2 minutes. Execution uses the same rules.
