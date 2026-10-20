@@ -96,6 +96,9 @@ What the breakdown shows:
   each), and 10% forward castles and towers. An order counts as sent at the enemy
   when it targets an enemy unit or building, goes into an enemy base, or goes within 12 tiles of where an enemy
   army was ordered within a minute (fights in the open count too).
+  Warships count for less in pressure where water does not decide the land fight: 0.4 of their value on lake
+  maps (4 Lakes, Golden Lakes, Kawasan), 0.7 on coastal maps (Baltic, Mediterranean, Continental...), in full
+  on island maps, 0.6 elsewhere. Micro still counts water fights at full value.
   Army on the map and army sent early count more: double before 15:00, 1.5 times before 20:00, and
   normal after that. Unit value is the resource cost,
   with gold weighted 1.5, stone 1.2, food and wood 1.0, so an expensive army kept topped up scores higher than

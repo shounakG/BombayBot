@@ -9,6 +9,7 @@ named after its base unit (Archer covers Crossbowmen and Arbalesters, etc.).
 """
 import json
 import math
+import re
 from functools import lru_cache
 import os
 from collections import Counter, defaultdict
@@ -367,7 +368,8 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 	# Pressure: the army a player keeps on the map (units plus castles and towers, valued by cost),
 	# the army value sent into enemy bases, and forward castles and towers.
 	imp_at = {p: stats[p]['ages'].get('Imperial Age') for p in pids}
-	army = army_presence(A, players, base_of, villagers, end, offensive, imp_at)
+	water = water_weight(rec.get('map_name'))
+	army = army_presence(A, players, base_of, villagers, end, offensive, imp_at, water)
 	fwd_up = Counter(c['player'] for c in castles if c['forward'] and c['status'] in ('up', 'lost', 'deleted'))
 	fwd_towers = Counter()
 	for a in A:
@@ -540,7 +542,7 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 		)
 
 	return dict(
-		duration=end, players=players, stats=stats, castles=castles,
+		duration=end, players=players, stats=stats, castles=castles, water_weight=water,
 		tributes=[(a, b, int(v)) for (a, b), v in trib_pairs.most_common()],
 		pressure=timeline_in, moments=key_moments(players, stats, castles, {p: t for p, t in resigns.items() if t <= end}),
 	)
@@ -980,6 +982,24 @@ def find_engagements(A, players, base_of, villagers):
 	return offensive
 
 
+# How much warships count in pressure, by map (names are matched without spaces or symbols). On lake maps
+# water is worth holding but gives no edge on land; on island maps water is the game. Other maps: 0.6.
+WATER_IMPORTANCE = (
+	(('island', 'archipelago', 'waternomad', 'migration', 'pacific'), 1.0),
+	(('baltic', 'mediterranean', 'coastal', 'continental', 'scandinavia', 'rivers', 'nile', 'sea'), 0.7),
+	(('fourlakes', '4lakes', 'goldenlakes', 'kawasan', 'lake'), 0.4),
+)
+WATER_DEFAULT = 0.6
+
+
+def water_weight(map_name):
+	name = re.sub(r'[^0-9a-z]', '', (map_name or '').lower())
+	for keys, weight in WATER_IMPORTANCE:
+		if any(k in name for k in keys):
+			return weight
+	return WATER_DEFAULT
+
+
 EARLY_DOUBLE = 15  # minutes: army counts double before this
 EARLY_HALF = 20    # and 1.5 times before this
 ARMY_FROM = 8  # army on the map is averaged from minute 8
@@ -994,7 +1014,7 @@ def early_weight(minute, imp_at=None):
 	return 1.0
 
 
-def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None):
+def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None, water=1.0):
 	"""
 	Estimate each player's army on the map over time from the unit ids in their commands.
 	A unit is military if it ever gets an army-only command (formation, stance, patrol, attack-move...)
@@ -1022,7 +1042,7 @@ def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None):
 		if a['a'] == 'DE_QUEUE' and a.get('player_id') in players:
 			name = _name('objects', a['unit_id'])
 			if name not in NOT_ARMY and name != 'Villager':
-				queued[a['player_id']].append((a['t'], unit_value(a['unit_id']), a.get('amount', 1) or 1))
+				queued[a['player_id']].append((a['t'], unit_value(a['unit_id']), a.get('amount', 1) or 1, name in WARSHIPS))
 
 	out = {}
 	for pid in pids:
@@ -1033,13 +1053,18 @@ def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None):
 				alive[m] += 1
 		alive = [min(n, POP_CAP) for n in alive]  # an estimate can never beat the population cap
 		value_per_unit, total, count, q = [0.0] * minutes, 0.0, 0, sorted(queued[pid])
+		press_value = [0.0] * minutes  # the same, with warships discounted by how much water matters on this map
+		ships = 0.0
 		j = 0
 		for m in range(minutes):
 			while j < len(q) and q[j][0] <= (m + 1) * 60000:
 				total += q[j][1] * q[j][2]
 				count += q[j][2]
+				if q[j][3]:
+					ships += q[j][1] * q[j][2]
 				j += 1
 			value_per_unit[m] = total / count if count else 0.0
+			press_value[m] = value_per_unit[m] * (1 - (ships / total if total else 0) * (1 - water))
 		structures = [0.0] * minutes
 		for a in A:
 			if a['a'] == 'BUILD' and a.get('player_id') == pid and _name('objects', a['building_id']) in CASTLES | TOWERS:
@@ -1054,7 +1079,7 @@ def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None):
 		window = range(min(ARMY_FROM, minutes - 1), minutes)  # from 8:00 (Feudal armies count)
 		# A small army early is worth a lot: x2 before 15:00, x1.5 before 20:00 (same as army sent)
 		my_imp = imp_at.get(pid) if isinstance(imp_at, dict) else imp_at
-		on_map = [(alive[m] * value_per_unit[m] + structures[m]) * early_weight(m, my_imp) for m in window]
+		on_map = [(alive[m] * press_value[m] + structures[m]) * early_weight(m, my_imp) for m in window]
 		# Micro inputs: how much the player controls the army, picks targets, splits groups and keeps units alive.
 		army_cmds = [a for a in A if a.get('player_id') == pid and any(i in military[pid] for i in (a.get('object_ids') or []))]
 		army_minutes = max(1.0, (end - min((seen[(pid, i)][0] for i in military[pid]), default=end)) / 60000)
@@ -1096,7 +1121,7 @@ def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None):
 			peak_units=max(alive) if alive else 0,
 			avg_value_on_map=round(sum(on_map) / len(on_map)),
 			unit_value=round(value_per_unit[-1]),
-			value_sent=round(sum(value_per_unit[m] * early_weight(m, (imp_at or {}).get(pid)) for _, m in sent)),
+			value_sent=round(sum(press_value[m] * early_weight(m, (imp_at or {}).get(pid)) for _, m in sent)),
 			units_by_5min=[alive[m] for m in range(0, minutes, 5)],
 		)
 	return out
