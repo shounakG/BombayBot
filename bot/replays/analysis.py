@@ -600,6 +600,11 @@ def saving_minutes(A, pid, ages):
 	return out
 
 
+def _absolute(share):
+	""" A 0..1 share as a 1..10 score on its own scale (not relative to the lobby). """
+	return 1.0 if share is None else max(1.0, min(10.0, 10 * share))
+
+
 def _did(raw):
 	""" Did anyone in the lobby do this at all? Parts nobody did are left out of a score. """
 	return any(v for v in raw.values() if v is not None)
@@ -897,9 +902,14 @@ def playstyle(A, players, stats, army, floating, end, trib_out):
 				mil_times[p].append(a['t'])
 	castle_plus = {p: (stats[p]['ages'].get('Castle Age') or end) + 10 * 60000 for p in pids}
 	avg_pop = {p: average_population(A, p, army[p]['_alive'], end, stats[p].get('_vill_alive')) for p in pids}
+	# Steadiness is scored on its own scale (86% of minutes = 8.6), not stretched across the lobby, so a small
+	# gap stays small. Worker production also counts how much was made: more TCs and Docks at once is better.
+	worker_end = {p: min(end, castle_plus[p]) for p in pids}
+	worker_rate = _minmax({p: sum(1 for t in stats[p].get('_vill_made') or [] if t <= worker_end[p]) / max(1, worker_end[p] / 60000)
+		for p in pids})
 	macro_parts = [
-		_minmax({p: _steady(vill_times[p], 0, min(end, castle_plus[p])) for p in pids}),
-		_minmax({p: _steady(mil_times[p], stats[p]['first_military'], end, saving_minutes(A, p, stats[p]['ages'])) for p in pids}),
+		{p: 0.5 * _absolute(_steady(vill_times[p], 0, worker_end[p])) + 0.5 * worker_rate[p] for p in pids},
+		{p: _absolute(_steady(mil_times[p], stats[p]['first_military'], end, saving_minutes(A, p, stats[p]['ages']))) for p in pids},
 		_minmax({p: army[p]['avg_units'] for p in pids}),
 		_minmax(avg_pop),
 		_minmax({p: villager_value(stats[p].get('_vill_made') or stats[p]['_vill_times'], stats[p]['_attacked'], stats[p].get('_vill_alive')) for p in pids}),

@@ -75,6 +75,9 @@ What the breakdown shows:
   gold was under 20% of their spending and they sold 1000+ at the Market or built no new Mining Camp (or Mule
   Cart / Muisca drop site), with no trade carts (20 remove the penalty) and no gold tributed in by allies. A
   player still mining gold is never penalised for not trading.
+  Production steadiness (share of minutes with a worker or military unit queued) is scored on its own scale:
+  86% of minutes scores 8.6. Worker production is half steadiness and half workers made per minute up to 10
+  minutes after Castle Age, so producing from more Town Centers and Docks at once counts.
   Fishing ships count as economy workers alongside villagers (a Dock trains one every 40 seconds); warships
   count as army, and transport ships as neither.
   Villagers alive are estimated, since the replay has no unit counts: a queue click is 1 villager (5 with
