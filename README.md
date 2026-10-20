@@ -89,7 +89,7 @@ What the breakdown shows:
   research, buildings, tributes) from 10:00, so a big bank matters less for a player converting a lot into units.
   Floating: resources banked from 10 minutes on count against the player, except near 200 population
   (estimated villagers alive, army on the map and trade carts) and money saved for a research, age-up
-  or building costing 600+ that the player starts within the next 2 minutes. Execution uses the same rules.
+  or building costing 550+ that the player starts within the next 2 minutes. Execution uses the same rules.
   Micro is about fights, not clicks, and is estimated because the replay has no kill data: a unit that stops
   being commanded during or right after a fight counts as lost there, and its value is credited to the enemies
   fighting that player at the time, split by how many orders each aimed at that player (an order at
