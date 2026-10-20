@@ -63,6 +63,8 @@ What the breakdown shows:
   gold was under 20% of their spending and they sold 1000+ at the Market or built no new Mining Camp (or Mule
   Cart / Muisca drop site), with no trade carts (20 remove the penalty) and no gold tributed in by allies. A
   player still mining gold is never penalised for not trading.
+  Fishing ships count as economy workers alongside villagers (a Dock trains one every 40 seconds); warships
+  count as army, and transport ships as neither.
   Villagers alive are estimated, since the replay has no unit counts: a queue click is 1 villager (5 with
   Shift); with several Town Centers selected each villager goes to the TC with the shortest queue, and a TC
   trains one every 25 seconds. A villager is counted as killed when its last order is followed within 3

@@ -378,7 +378,8 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 	for p in pids:
 		v = vest[p]
 		stats[p]['_vill_made'], stats[p]['_vill_alive'] = v['made'], v['alive']
-		stats[p]['villagers_made'] = len(v['made'])
+		stats[p]['villagers_made'] = v['villagers']
+		stats[p]['fishing_ships_made'] = v['fishing']
 		stats[p]['villagers_lost'] = len(v['lost'])
 		stats[p]['villagers_peak'] = max(v['alive'], default=0)
 		stats[p]['villagers_at'] = {m: v['alive'][m] for m in (20, 30, 40) if m < len(v['alive'])}
@@ -554,6 +555,7 @@ REPLACE_WINDOW = 10  # minutes: villagers queued past 150 within 10 minutes of a
 
 
 VILLAGER_TRAIN = 25000     # ms per villager at one Town Center
+WORKER_TRAIN = {'Villager': VILLAGER_TRAIN, 'Fishing Ship': 40000}  # fishing ships are economy workers too
 VILLAGER_KILL_RADIUS = 10  # tiles
 VILLAGER_KILL_ORDERS = 3   # enemy army orders near a villager's last position that mean it was likely killed
 START_VILLAGERS = {'Chinese': 6, 'Mayans': 4}
@@ -561,7 +563,7 @@ START_VILLAGERS = {'Chinese': 6, 'Mayans': 4}
 
 def villager_estimate(A, players, villagers, army_alive, end):
 	"""
-	Estimated villagers alive per minute. The replay has no unit counts, so:
+	Estimated economy workers alive per minute: villagers plus fishing ships. The replay has no unit counts, so:
 	- made: each queue click is 1 villager (5 with Shift); with several Town Centers selected each villager
 	  goes to the TC with the shortest queue, and a TC trains one every 25 s, so over-queueing is not counted;
 	- lost: a villager whose last order was followed, within 3 minutes, by 3+ enemy army orders within
@@ -597,15 +599,20 @@ def villager_estimate(A, players, villagers, army_alive, end):
 	out = {}
 	minutes = int(end // 60000) + 1
 	for pid, p in players.items():
-		made, free = [], defaultdict(int)
+		made, free, kinds = [], defaultdict(int), Counter()
 		for a in A:
-			if a['a'] == 'DE_QUEUE' and a.get('player_id') == pid and a['t'] <= end and _name('objects', a['unit_id']) == 'Villager':
-				ids = a.get('object_ids') or [0]
-				for _ in range(a.get('amount', 1) or 1):
-					tc = min(ids, key=lambda i: free[i])
-					free[tc] = max(a['t'], free[tc]) + VILLAGER_TRAIN
-					if free[tc] <= end:  # still training when the game was decided: not made
-						made.append(free[tc])
+			if a['a'] != 'DE_QUEUE' or a.get('player_id') != pid or a['t'] > end:
+				continue
+			kind = _name('objects', a['unit_id'])
+			if kind not in WORKER_TRAIN:
+				continue
+			ids = a.get('object_ids') or [0]
+			for _ in range(a.get('amount', 1) or 1):
+				b = min(ids, key=lambda i: free[i])  # the Town Center (or Dock) with the shortest queue
+				free[b] = max(a['t'], free[b]) + WORKER_TRAIN[kind]
+				if free[b] <= end:  # still training when the game was decided: not made
+					made.append(free[b])
+					kinds[kind] += 1
 		made.sort()
 		lost = [t for o, t in deleted.items() if owner.get(o) == pid]
 		for o, (t, x, y) in last.items():
@@ -627,7 +634,7 @@ def villager_estimate(A, players, villagers, army_alive, end):
 			n = start + sum(1 for x in made if x <= t) - sum(1 for x in lost if x <= t)
 			army = army_alive[pid][min(len(army_alive[pid]) - 1, m)] if army_alive.get(pid) else 0
 			alive.append(max(0, min(n, POP_CAP - army)))
-		out[pid] = dict(made=made, lost=lost, alive=alive)
+		out[pid] = dict(made=made, lost=lost, alive=alive, villagers=kinds['Villager'], fishing=kinds['Fishing Ship'])
 	return out
 
 
@@ -749,11 +756,11 @@ def playstyle(A, players, stats, army, floating, end, trib_out):
 		if a['a'] == 'DE_QUEUE' and a.get('player_id') in players:
 			p, n = a['player_id'], _name('objects', a['unit_id'])
 			amt = a.get('amount', 1) or 1
-			if n == 'Villager':
+			if n in WORKER_TRAIN:  # villagers and fishing ships are economy production
 				vill_times[p].append(a['t'])
 			elif n in ('Trade Cart', 'Trade Cog'):
 				trade[p] += amt
-			else:
+			elif n not in NOT_ARMY:  # warships count; transport ships do not
 				mil_times[p].append(a['t'])
 	castle_plus = {p: (stats[p]['ages'].get('Castle Age') or end) + 10 * 60000 for p in pids}
 	avg_pop = {p: average_population(A, p, army[p]['_alive'], end, stats[p].get('_vill_alive')) for p in pids}
