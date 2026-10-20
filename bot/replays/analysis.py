@@ -404,7 +404,7 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 					if feudal and feudal <= a['t'] < (castle or end):
 						feudal_units += a.get('amount', 1) or 1
 		uptime = production_uptime(vest[p]['busy'], vest[p]['first_use'], mil_times, feudal, castle or end,
-			age_saving_minutes(stats[p]['ages']))
+			saving_minutes(A, p, stats[p]['ages']))
 		stats[p]['feudal_units'] = feudal_units
 		stats[p]['feudal_uptime'] = uptime
 		if feudal_units >= FEUDAL_ARMY_MIN and uptime is not None:
@@ -586,12 +586,17 @@ def _steady(times, start, end, skip=()):
 	return sum(1 for m in minutes if m in busy) / len(minutes)
 
 
-def age_saving_minutes(ages):
-	""" Minutes spent saving for an age-up (the 2 minutes before each click): not a production gap. """
+def saving_minutes(A, pid, ages):
+	"""
+	Minutes spent saving for an age-up or an expensive technology (600+ resources): the 2 minutes before
+	each click. Not a production gap.
+	"""
+	clicks = [t for t in ages.values() if t]
+	clicks += [a['t'] for a in A if a['a'] == 'RESEARCH' and a.get('player_id') == pid
+		and tech_cost(a.get('technology_id')) >= BIG_PURCHASE]
 	out = set()
-	for t in ages.values():
-		if t:
-			out.update(range(int((t - SAVE_WINDOW) // 60000), int(t // 60000) + 1))
+	for t in clicks:
+		out.update(range(int((t - SAVE_WINDOW) // 60000), int(t // 60000) + 1))
 	return out
 
 
@@ -894,7 +899,7 @@ def playstyle(A, players, stats, army, floating, end, trib_out):
 	avg_pop = {p: average_population(A, p, army[p]['_alive'], end, stats[p].get('_vill_alive')) for p in pids}
 	macro_parts = [
 		_minmax({p: _steady(vill_times[p], 0, min(end, castle_plus[p])) for p in pids}),
-		_minmax({p: _steady(mil_times[p], stats[p]['first_military'], end, age_saving_minutes(stats[p]['ages'])) for p in pids}),
+		_minmax({p: _steady(mil_times[p], stats[p]['first_military'], end, saving_minutes(A, p, stats[p]['ages'])) for p in pids}),
 		_minmax({p: army[p]['avg_units'] for p in pids}),
 		_minmax(avg_pop),
 		_minmax({p: villager_value(stats[p].get('_vill_made') or stats[p]['_vill_times'], stats[p]['_attacked'], stats[p].get('_vill_alive')) for p in pids}),
