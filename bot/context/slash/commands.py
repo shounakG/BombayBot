@@ -26,7 +26,7 @@ def _parse_duration(ctx: SlashContext, s: str):
 		raise bot.Exc.SyntaxError(ctx.qc.gt("Invalid duration format. Syntax: 3h2m1s or 03:02:01."))
 
 
-async def run_slash(coro: Callable, interaction: Interaction, **kwargs):
+async def run_slash(coro: Callable, interaction: Interaction, any_channel: bool = False, **kwargs):
 	# get passed time since interaction was created, convert snowflake into timestamp
 	passed_time = time.time() - (((int(interaction.id) >> 22) + 1420070400000) / 1000.0)
 
@@ -40,6 +40,10 @@ async def run_slash(coro: Callable, interaction: Interaction, **kwargs):
 		)
 		return
 	qc = bot.queue_channels.get(interaction.channel_id)
+	if qc is None and any_channel and interaction.guild_id:
+		# Commands that are not about one queue channel (in-game name links) work anywhere in the server.
+		qc = next((q for q in bot.queue_channels.values()
+			if getattr(dc.get_channel(q.id), 'guild', None) and dc.get_channel(q.id).guild.id == interaction.guild_id), None)
 	if qc is None:
 		await interaction.response.send_message(embed=error_embed("Not in a queue channel.", title="Error"))
 		return
@@ -762,21 +766,21 @@ async def _aoe_link(
 		interaction: Interaction,
 		name: str = SlashOption(description="Your AoE2 in-game name, exactly as it shows in games."),
 		player: Member = SlashOption(required=False, verify=False, description="Moderators: link the name to this member.")
-): await run_slash(bot.commands.aoe_link, interaction=interaction, name=name, player=player)
+): await run_slash(bot.commands.aoe_link, interaction=interaction, any_channel=True, name=name, player=player)
 
 
 @groups.aoe.subcommand(name='unlink', description='Remove a linked in-game name.')
 async def _aoe_unlink(
 		interaction: Interaction,
 		name: str = SlashOption(description="The in-game name to unlink.")
-): await run_slash(bot.commands.aoe_unlink, interaction=interaction, name=name)
+): await run_slash(bot.commands.aoe_unlink, interaction=interaction, any_channel=True, name=name)
 
 
 @groups.aoe.subcommand(name='names', description='Show the in-game names linked to a member.')
 async def _aoe_names(
 		interaction: Interaction,
 		player: Member = SlashOption(required=False, verify=False)
-): await run_slash(bot.commands.aoe_names, interaction=interaction, player=player)
+): await run_slash(bot.commands.aoe_names, interaction=interaction, any_channel=True, player=player)
 
 
 # replay -> ...
