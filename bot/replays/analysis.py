@@ -604,7 +604,8 @@ def villager_estimate(A, players, villagers, army_alive, end):
 				for _ in range(a.get('amount', 1) or 1):
 					tc = min(ids, key=lambda i: free[i])
 					free[tc] = max(a['t'], free[tc]) + VILLAGER_TRAIN
-					made.append(free[tc])
+					if free[tc] <= end:  # still training when the game was decided: not made
+						made.append(free[tc])
 		made.sort()
 		lost = [t for o, t in deleted.items() if owner.get(o) == pid]
 		for o, (t, x, y) in last.items():
