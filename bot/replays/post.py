@@ -192,7 +192,7 @@ def text_for_ai(result, map_name=None, lobby=None):
 				f"population kept high (estimated average {s.get('avg_pop')} of 200 from 20 min), economy; micro {s['micro']}/10 from fights: estimated enemy army value killed "
 				f"{s['army']['value_killed_in_fights']} vs own army value lost {s['army']['value_lost_in_fights']}, "
 				f"{round(s['army']['targeted_share'] * 100)}% of attack orders aimed at a specific target); "
-				f"army on the map from 15 min: {s['army']['avg_units']} units on average, peak {s['army']['peak_units']}, "
+				f"enemy villagers killed about {s.get('villagers_killed', 0)}; army on the map from 8 min: {s['army']['avg_units']} units on average, peak {s['army']['peak_units']}, "
 				f"average unit value {s['army']['unit_value']} (gold weighted most), army value sent at the enemy (its base, units or buildings) "
 				f"{s['army']['value_sent']}; tributes sent {s['trib_out']}, received {s['trib_in']}; APM {s['apm']}; "
 				f"score {s['scores']['overall']}/10 (exec {s['scores']['exec']}, pressure {s['scores']['press']}, "
