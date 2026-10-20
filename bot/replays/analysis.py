@@ -376,7 +376,6 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 		if a['a'] == 'BUILD' and a.get('player_id') in players and _name('objects', a['building_id']) in TOWERS:
 			if players[base_of(a['x'], a['y'])]['team_id'] != players[a['player_id']]['team_id']:
 				fwd_towers[a['player_id']] += 1
-	on_map = _minmax({p: army[p]['avg_value_on_map'] for p in pids})
 	sent = _minmax({p: army[p]['value_sent'] for p in pids})
 	forward = _minmax({p: fwd_up[p] + 0.25 * fwd_towers[p] for p in pids})
 	for p in pids:
@@ -429,7 +428,16 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 	playstyle(A, players, stats, army, floating, end, trib_out)
 	# Pressure: army on the map 35%, army value sent at the enemy 40%, damage done (enemy army value killed in
 	# fights plus enemy villagers killed) 15%, forward castles and towers 10%.
-	damage = _minmax({p: army[p]['value_killed_in_fights'] + stats[p]['_vill_kill_value'] for p in pids})
+	dealt = {p: army[p]['value_killed_in_fights'] + stats[p]['_vill_kill_value'] for p in pids}
+	damage = _minmax(dealt)
+	# Army on the map only matters if it does damage: scale it by damage done per army value, with full
+	# credit at the lobby median or better and nothing for an army that never hurt anyone.
+	per_army = {p: dealt[p] / army[p]['avg_value_on_map'] for p in pids if army[p]['avg_value_on_map']}
+	median = sorted(per_army.values())[len(per_army) // 2] if per_army else 0
+	for p in pids:
+		eff = min(1.0, per_army.get(p, 0) / median) if median else 1.0
+		army[p]['damage_efficiency'] = round(eff, 2)
+	on_map = _minmax({p: army[p]['avg_value_on_map'] * army[p]['damage_efficiency'] for p in pids})
 	press = {p: 0.35 * on_map[p] + 0.40 * sent[p] + 0.15 * damage[p] + 0.10 * forward[p] for p in pids}
 	# Pressure on each base = enemy army orders aimed into it, plus enemy castles and towers built in it.
 	# A castle is only a big threat when an army comes with it: its weight grows with the enemy army
@@ -502,9 +510,9 @@ def analyze(rec: dict, meta: dict = None) -> dict:
 		_minmax({p: stats[p]['flares'] for p in pids}),
 	]
 	weights = {
-		'Flank': dict(exec=.25, press=.35, surv=.25, team=.15),
-		'Pocket': dict(exec=.35, press=.20, surv=.20, team=.25),
-		None: dict(exec=.30, press=.30, surv=.20, team=.20),
+		'Flank': dict(exec=.27, press=.36, surv=.27, team=.10),
+		'Pocket': dict(exec=.40, press=.25, surv=.25, team=.10),
+		None: dict(exec=.32, press=.32, surv=.26, team=.10),
 	}
 	for p in pids:
 		e = sum(w * part[p] for w, part in zip(EXEC_WEIGHTS, exec_parts)) / sum(EXEC_WEIGHTS[:len(exec_parts)])

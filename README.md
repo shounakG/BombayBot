@@ -56,6 +56,8 @@ What the breakdown shows:
   Each age's army lists the two biggest unit lines plus any siege the player made (2 or more units).
 * When the AI recap is on, the summary at the top is labelled "AI summary"; the plain summary has no label.
 * Each player also gets four scores from 1 to 10, relative to the lobby: execution, pressure, survival and team play.
+  Overall weights: flanks execution 27%, pressure 36%, survival 27%, team 10%; pockets 40/25/25/10; others
+  32/32/26/10. When survival is not scored its weight is spread over the rest.
   Execution: Castle and Imperial Age timing, villager value, first military unit and floating. A player who made
   8+ Feudal military units scores the better of their Castle Age click time and their Feudal production uptime
   (Town Centers and Docks kept busy, military buildings producing every minute), so a late Castle Age after a
@@ -94,7 +96,8 @@ What the breakdown shows:
   look the same as kills and count in full. Micro weighs value traded (60%), how much fighting the player did (25%)
   and target picking (15%). The Micro label also needs more value killed than lost (1.1 times or better).
 * Pressure measures the army a player keeps on the map and how much of it they send at the enemy:
-  35% average army value on the map from 8:00 on (units plus castles, Kreposts, Donjons and towers), 40% army
+  35% average army value on the map from 8:00 on, scaled by how much damage that army did for its size (full
+  credit at the lobby median or better, none for an army that never did damage) (units plus castles, Kreposts, Donjons and towers), 40% army
   value sent at the enemy, 15% damage done (enemy army value killed in fights plus enemy villagers killed, 100
   each), and 10% forward castles and towers. An order counts as sent at the enemy
   when it targets an enemy unit or building, goes into an enemy base, or goes within 12 tiles of where an enemy
