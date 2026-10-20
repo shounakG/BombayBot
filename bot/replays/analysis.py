@@ -588,12 +588,12 @@ def _steady(times, start, end, skip=()):
 
 def saving_minutes(A, pid, ages):
 	"""
-	Minutes spent saving for an age-up or an expensive technology (600+ resources): the 2 minutes before
+	Minutes spent saving for an age-up or an expensive technology (550+ resources): the 2 minutes before
 	each click. Not a production gap.
 	"""
 	clicks = [t for t in ages.values() if t]
 	clicks += [a['t'] for a in A if a['a'] == 'RESEARCH' and a.get('player_id') == pid
-		and tech_cost(a.get('technology_id')) >= BIG_PURCHASE]
+		and tech_cost(a.get('technology_id')) >= SAVE_TECH_MIN]
 	out = set()
 	for t in clicks:
 		out.update(range(int((t - SAVE_WINDOW) // 60000), int(t // 60000) + 1))
@@ -615,6 +615,7 @@ def _combine(parts, p):
 VILLAGER_FULL, VILLAGER_STOP = 120, 150
 POP_CAP_NEAR = 190
 SAVE_WINDOW = 120000  # resources spent on a big purchase within 2 minutes were being saved on purpose
+SAVE_TECH_MIN = 550  # a technology this expensive takes saving up for: not a production gap
 BIG_PURCHASE = 600    # research, age-up or building costing at least this much (all resources)
 NORMAL_FLOAT = 400    # a little bank is normal
 
