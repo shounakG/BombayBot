@@ -51,7 +51,13 @@ LINE_NAMES = {
 	'Mangonel': 'Mangonels', 'Battering Ram': 'Rams', 'Scorpion': 'Scorpions', 'Bombard Cannon': 'Bombard Cannons',
 	'Trebuchet': 'Trebuchets', 'Monk': 'Monks', 'Galley': 'Galleys', 'Fire Galley': 'Fire ships',
 	'Demolition Raft': 'Demo ships', 'Cannon Galleon': 'Cannon Galleons',
+	'War Galley': 'Galleys', 'Galleon': 'Galleys', 'Fire Ship': 'Fire ships', 'Demolition Ship': 'Demo ships',
+	'Hulk': 'Hulks', 'War Hulk': 'Hulks', 'Carrack': 'Carracks', 'Longboat': 'Longboats', 'Caravel': 'Caravels',
+	'Dromon': 'Dromons', 'Turtle Ship': 'Turtle Ships', 'Thirisadai': 'Thirisadai',
+	'Camel Scout': 'Camels',
 }
+WARSHIPS = {'Galley', 'War Galley', 'Galleon', 'Fire Galley', 'Fire Ship', 'Demolition Raft', 'Demolition Ship',
+	'Cannon Galleon', 'Hulk', 'War Hulk', 'Carrack', 'Longboat', 'Caravel', 'Dromon', 'Turtle Ship', 'Thirisadai'}
 CASTLES = {'Castle', 'Krepost', 'Donjon', 'Fortress'}
 ECO_BUILDINGS = {'Town Center', 'House', 'Farm', 'Mill', 'Lumber Camp', 'Mining Camp', 'Market', 'Dock',
 	'Folwark', 'Pasture', 'Feitoria', 'Settlement', 'Mule Cart'}
@@ -517,6 +523,7 @@ FEUDAL_NAMES = {
 	'Archer': 'archers', 'Skirmisher': 'skirms', 'Scout Cavalry': 'scouts', 'Militia': 'Men-at-Arms',
 	'Spearman': 'spears', 'Eagle Scout': 'Eagles', 'Camel Rider': 'camels', 'Cavalry Archer': 'cavalry archers',
 	'Battle Elephant': 'elephants', 'Steppe Lancer': 'lancers',
+	'Galley': 'galleys', 'Hulk': 'hulks', 'Fire Galley': 'fire ships', 'Demolition Raft': 'demo ships',
 }
 NOT_ARMY = (MILITARY_SKIP - {'Monk'}) | {'Trade Cart', 'Trade Cog'}  # monk pushes are a strategy too
 
@@ -1052,7 +1059,10 @@ SIEGE = {'Battering Ram', 'Mangonel', 'Scorpion', 'Bombard Cannon', 'Trebuchet',
 
 
 def _top_lines(counter, minimum, names=LINE_NAMES, limit=2):
-	return [names.get(n, n) for n, c in counter.most_common() if c >= minimum][:limit]
+	merged = Counter()  # upgrades of one line (Galley, War Galley) count together
+	for n, c in counter.items():
+		merged[names.get(n, n)] += c
+	return [label for label, c in merged.most_common() if c >= minimum][:limit]
 
 
 def _army_lines(counter, minimum=5):
@@ -1086,7 +1096,11 @@ def strategy_parts(st, my_castles, A, pid, players, base_of, attack_times):
 	if forward_towers >= 2:
 		opening = "Feudal tower rush"
 	elif sum(feudal_army.values()) >= 8:
-		opening = "Feudal " + " + ".join(feudal_units or ["army"]) + ("" if feudal_attack else " (defensive)")
+		ships = sum(n for u, n in feudal_army.items() if u in WARSHIPS)
+		if ships * 2 >= sum(feudal_army.values()):  # mostly warships: a water opening (sea fights count as attacks)
+			opening = "Feudal water: " + " + ".join(feudal_units or ["warships"])
+		else:
+			opening = "Feudal " + " + ".join(feudal_units or ["army"]) + ("" if feudal_attack else " (defensive)")
 	elif feudal and castle and castle - feudal <= 4 * 60000:
 		opening = "Fast Castle"
 	else:
