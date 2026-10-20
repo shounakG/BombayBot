@@ -96,8 +96,8 @@ What the breakdown shows:
   each), and 10% forward castles and towers. An order counts as sent at the enemy
   when it targets an enemy unit or building, goes into an enemy base, or goes within 12 tiles of where an enemy
   army was ordered within a minute (fights in the open count too).
-  Army on the map and army sent early count more: double before 25:00, 1.5 times until the player reaches
-  Imperial Age, and normal after that. Unit value is the resource cost,
+  Army on the map and army sent early count more: double before 15:00, 1.5 times before 20:00, and
+  normal after that. Unit value is the resource cost,
   with gold weighted 1.5, stone 1.2, food and wood 1.0, so an expensive army kept topped up scores higher than
   a cheap one. Units are tracked by their ids in the player's commands (the replay has no kill data), and count
   as on the map until 90 seconds after their owner last commanded them.

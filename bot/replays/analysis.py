@@ -980,15 +980,16 @@ def find_engagements(A, players, base_of, villagers):
 	return offensive
 
 
-EARLY_MINUTES = 25
+EARLY_DOUBLE = 15  # minutes: army counts double before this
+EARLY_HALF = 20    # and 1.5 times before this
 ARMY_FROM = 8  # army on the map is averaged from minute 8
 
 
 def early_weight(minute, imp_at=None):
-	""" Army sent at the enemy early counts more: x2 before 25:00, x1.5 until Imperial Age, x1 after. """
-	if minute < EARLY_MINUTES:
+	""" Early army counts more (on the map and sent at the enemy): x2 before 15:00, x1.5 before 20:00, x1 after. """
+	if minute < EARLY_DOUBLE:
 		return 2.0
-	if imp_at is None or minute * 60000 < imp_at:
+	if minute < EARLY_HALF:
 		return 1.5
 	return 1.0
 
@@ -1051,7 +1052,7 @@ def army_presence(A, players, base_of, villagers, end, offensive, imp_at=None):
 					if i in military[pid]:
 						sent.add((i, int(a['t'] // 60000)))  # each unit once per minute
 		window = range(min(ARMY_FROM, minutes - 1), minutes)  # from 8:00 (Feudal armies count)
-		# A small army early is worth a lot: same weighting as army sent (x2 before 25:00, x1.5 until Imperial)
+		# A small army early is worth a lot: x2 before 15:00, x1.5 before 20:00 (same as army sent)
 		my_imp = imp_at.get(pid) if isinstance(imp_at, dict) else imp_at
 		on_map = [(alive[m] * value_per_unit[m] + structures[m]) * early_weight(m, my_imp) for m in window]
 		# Micro inputs: how much the player controls the army, picks targets, splits groups and keeps units alive.
