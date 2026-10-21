@@ -37,6 +37,10 @@ nano config.cfg
   # Rebuild after code changes                                                                                                                                                                                           
   docker compose up -d --build
 ```
+Queues and active matches are saved to `STATE_FILE` when the bot stops and loaded when it starts. The compose
+files keep it in `./data` (`data/saved_state.json`, mounted into the container), so a rebuild or a new image keeps
+running matches. Without the mount, a new container starts with no active matches and `/report` answers "You are
+not in an active match".
 ### Player stats and civ statistics
 Reports over the games analysed in the queue channel (uploads and automatic breakdowns):
 * `/aoe stat [player]`: games and win rate; flank and pocket games with their win rates; average APM; how the player

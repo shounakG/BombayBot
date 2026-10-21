@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import traceback
 import json
+import os
 from nextcord import Interaction
 
 from core.console import log
@@ -63,14 +64,17 @@ def save_state():
 	for match in bot.active_matches:
 		matches.append(match.serialize())
 
-	f = open("saved_state.json", 'w')
-	f.write(json.dumps(dict(queues=queues, matches=matches, allow_offline=bot.allow_offline, expire=bot.expire.serialize())))
-	f.close()
+	path = cfg.STATE_FILE or "saved_state.json"
+	if os.path.dirname(path):
+		os.makedirs(os.path.dirname(path), exist_ok=True)
+	with open(path, 'w') as f:
+		f.write(json.dumps(dict(queues=queues, matches=matches, allow_offline=bot.allow_offline, expire=bot.expire.serialize())))
+	log.info(f"Saved {len(queues)} queues and {len(matches)} active matches to {path}.")
 
 
 async def load_state():
 	try:
-		with open("saved_state.json", "r") as f:
+		with open(cfg.STATE_FILE or "saved_state.json", "r") as f:
 			data = json.loads(f.read())
 	except IOError:
 		return

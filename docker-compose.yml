@@ -12,6 +12,7 @@ services:
       DB_URI: ${DB_URI}
       LOG_LEVEL: ${LOG_LEVEL}
       STATUS: ${STATUS}
+      STATE_FILE: data/saved_state.json
     env_file:
       - .env
     healthcheck:
@@ -22,3 +23,4 @@ services:
       retries: 3
     volumes:
       - ./logs:/app/logs
+      - ./data:/app/data  # saved queues and active matches survive rebuilds

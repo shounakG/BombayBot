@@ -29,6 +29,9 @@ class _Config:
     GOOGLE_AI_API_KEY = ""
     GOOGLE_AI_MODEL = "gemma-4-31b-it"
     GOOGLE_AI_FALLBACK_MODELS = "gemini-3.6-flash,gemini-3.5-flash-lite"
+    # Queues and active matches are saved here on shutdown and loaded on start. In Docker, point it at a mounted
+    # folder (the compose files use data/saved_state.json with ./data mounted) or a rebuild loses them.
+    STATE_FILE = "saved_state.json"
 
 
 cfg = _Config()
